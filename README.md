@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/logo.svg" alt="Newsroom Alpha Auditor Logo" width="400">
-</p>
-
 # Newsroom Alpha Auditor 📈🤖
 
 > **From Headlines to Evidence: A Retrieval-Augmented Financial Narrative Auditor for Claim Verification, Market Alignment, and Causal Caution.**
