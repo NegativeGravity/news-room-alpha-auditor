@@ -1,26 +1,45 @@
-# Newsroom Alpha Auditor 📈🤖
+# News Room Alpha Auditor: Causal NLP & Market-RAG Pipeline
 
-> **From Headlines to Evidence: A Retrieval-Augmented Financial Narrative Auditor for Claim Verification, Market Alignment, and Causal Caution.**
+This repository implements a production-grade, end-to-end pipeline for auditing financial news. Engineered for quantitative alpha research, the system rigorously evaluates whether a news headline *actually caused* a market microstructure movement, or if the price action was merely correlation, market noise, or an event that was already fully "priced in."
 
-Newsroom Alpha Auditor is an advanced, production-grade AI system...
+By fusing CAPM-adjusted market mathematics with a two-stage Retrieval-Augmented Generation (RAG) architecture, this pipeline forces Large Language Models (LLMs) to ground their reasoning in strict financial reality rather than hallucinated narratives.
 
-# Newsroom Alpha Auditor 📈🤖
+---
 
-> **From Headlines to Evidence: A Retrieval-Augmented Financial Narrative Auditor for Claim Verification, Market Alignment, and Causal Caution.**
+## Architecture Overview
 
-Newsroom Alpha Auditor is an advanced, production-grade AI system designed to verify financial news narratives. It acts as an evidence-grounded financial fact-checker that prevents LLM hallucination by combining State-of-the-Art natural language processing with hard quantitative market data (CAPM-adjusted alpha and pre-event drift).
+The system is compartmentalized into five core modules, moving from raw tick/news ingestion to final causal verification.
 
-## 🏗️ System Architecture
+### 1. Data Ingestion & Alignment (`MarketDataLoader`)
+Robust loading and chronological alignment of multi-modal datasets:
+* **News Data:** Ticker-specific headlines, descriptions, and UTC timestamps.
+* **Price Data:** Daily OHLCV (Open, High, Low, Close, Volume) equities data.
+* **Index Data:** S&P 500 daily closing prices utilized as the broad market baseline.
 
-The project is structured into 5 highly decoupled phases:
+### 2. Quantitative Market Metrics (`AdvancedMarketCalculator`)
+Before any text processing occurs, the system establishes the mathematical "ground truth" of the asset's behavior. 
 
-1. **Advanced Market Evidence Engine:** Calculates True Alpha (using a 60-day rolling covariance/dynamic beta against the S&P 500), Pre-event Drift, and Volume Z-Scores to establish the mathematical reality of a market event. Uses `ProsusAI/finbert` for semantic direction extraction.
-2. **Two-Stage Semantic Retrieval (RAG):** Employs a zero-future-leakage architecture. Uses `BAAI/bge-large-en-v1.5` for dense vector retrieval via `FAISS` (Inner Product) and `BAAI/bge-reranker-large` as a cross-encoder to rigorously rerank top candidates based on financial context.
-3. **Causal Market Auditor (LLM):** A heavily engineered LLM reasoning pipeline that forces the model to differentiate between correlation and causation, checks for "priced-in" events, and enforces strict JSON schema outputs.
-4. **System Evaluator:** Automatically benchmarks the RAG architecture against rule-based and Vanilla LLM baselines using macro F1 scores and confusion matrices.
-5. **Failure Analysis:** A critical review module that isolates "Dangerous Hallucinations" (False Positives) and "Missed Signals" (False Negatives) to ensure absolute reliability in trading environments.
+* **Pre-event Drift:** The asset's return over the $t-5$ window prior to the news, identifying if the market had already anticipated the catalyst.
+* **Volume Z-Score:** A 20-day rolling standard score of trading volume to detect statistically significant market participation:
+  $$Z_{volume} = \frac{V_t - \mu_{20}}{\sigma_{20}}$$
+* **Dynamic Beta & True Alpha:** Calculates a rolling 60-day covariance with the S&P 500 to establish a dynamic CAPM Beta. The expected market return is subtracted from the asset's actual return to isolate the idiosyncratic **True Alpha**:
+  $$\beta_t = \frac{\text{Cov}(R_{stock}, R_{market})}{\text{Var}(R_{market})}$$
+  $$\alpha_{true} = R_{stock} - (\beta_t \times R_{market})$$
 
-## ⚙️ Installation & Setup
+### 3. NLP Sentiment & Heuristic Labeling (`FinbertLabeler`)
+Utilizes the domain-specific `ProsusAI/finbert` model to score headline sentiment (+1, -1, 0). The pipeline then applies a deterministic heuristic ruleset—combining sentiment, True Alpha, and Volume Z-Score—to assign a rigid "Weak Label" (e.g., `SUPPORTED`, `WEAKLY_SUPPORTED`, `UNSUPPORTED`, `UNVERIFIABLE`).
 
-```bash
-pip install faiss-cpu sentence-transformers transformers torch scikit-learn matplotlib seaborn
+### 4. Two-Stage Market-RAG (`ProFinancialRetriever`)
+To provide the auditor with historical context, the pipeline leverages an advanced Retrieval-Augmented Generation setup to surface relevant past news:
+* **Bi-Encoder Vector Search:** Uses `BAAI/bge-large-en-v1.5` and `FAISS` inner-product indexing for high-speed, dense candidate retrieval.
+* **Cross-Encoder Reranking:** Passes the top candidates through `BAAI/bge-reranker-large` to optimize for maximum contextual relevance before feeding the LLM.
+
+### 5. LLM Causal Auditing & Evaluation (`CausalMarketAuditor` & `ProEvaluator`)
+The final verification engine. The LLM is injected with the computed quantitative metrics, the target headline, and the retrieved historical evidence. 
+
+It operates under strict systemic constraints:
+1. **Differentiate Correlation from Causation:** Must extract explicit causal connectors (e.g., "due to").
+2. **Flag Priced-In Events:** Must reject alpha claims if pre-event drift absorbed the news.
+3. **Structured Output:** Forces a strictly typed JSON response containing the verdict, confidence score, and extracted evidence.
+
+The accompanying `ProEvaluator` measures the LLM's causal reasoning against the heuristic baseline, tracking critical system metrics like "Dangerous Hallucinations" and generating formal confusion matrices.
